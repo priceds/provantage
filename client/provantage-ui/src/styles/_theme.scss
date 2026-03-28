@@ -1,0 +1,25 @@
+@use '@angular/material' as mat;
+
+// Custom dark theme using ProVantage palette
+$provantage-primary: mat.define-palette(mat.$deep-purple-palette, 400, 300, 600);
+$provantage-accent:  mat.define-palette(mat.$teal-palette, A200, A100, A400);
+$provantage-warn:    mat.define-palette(mat.$red-palette, 400);
+
+$provantage-theme: mat.define-dark-theme((
+  color: (
+    primary:  $provantage-primary,
+    accent:   $provantage-accent,
+    warn:     $provantage-warn,
+  ),
+  typography: mat.define-typography-config(
+    $font-family: 'Inter, sans-serif',
+    $headline-1: mat.define-typography-level(2.25rem, 2.75rem, 700, 'Plus Jakarta Sans'),
+    $headline-2: mat.define-typography-level(1.875rem, 2.25rem, 700, 'Plus Jakarta Sans'),
+    $headline-3: mat.define-typography-level(1.5rem, 2rem, 600, 'Plus Jakarta Sans'),
+    $headline-4: mat.define-typography-level(1.25rem, 1.75rem, 600, 'Plus Jakarta Sans'),
+  ),
+  density: 0,
+));
+
+@include mat.core();
+@include mat.all-component-themes($provantage-theme);

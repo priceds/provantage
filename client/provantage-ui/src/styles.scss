@@ -1,0 +1,107 @@
+@use 'styles/variables' as *;
+@import 'styles/typography';
+@import 'styles/theme';
+@import 'styles/animations';
+
+// ─────────────────────────────────────────────────
+// GLOBAL RESET & BASE STYLES
+// ─────────────────────────────────────────────────
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: $bg-primary;
+  color: $text-primary;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  &:hover { background: rgba(255, 255, 255, 0.2); }
+}
+
+// Selection
+::selection {
+  background: rgba($color-primary, 0.3);
+  color: $text-primary;
+}
+
+// Links
+a {
+  color: $color-primary;
+  text-decoration: none;
+  transition: color $transition-fast;
+  &:hover { color: lighten($color-primary, 10%); }
+}
+
+// Material overrides for dark theme
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: #{$bg-elevated};
+  --mdc-snackbar-supporting-text-color: #{$text-primary};
+}
+
+// Status badges
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: $radius-pill;
+  font-size: $text-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.status-approved, &.status-active, &.status-matched {
+    background: rgba($color-accent, 0.15);
+    color: $color-accent;
+  }
+  &.status-pending, &.status-submitted, &.status-draft {
+    background: rgba($color-warning, 0.15);
+    color: $color-warning;
+  }
+  &.status-rejected, &.status-disputed, &.status-blacklisted {
+    background: rgba($color-danger, 0.15);
+    color: $color-danger;
+  }
+  &.status-info, &.status-sent {
+    background: rgba($color-info, 0.15);
+    color: $color-info;
+  }
+}
+
+// Page container
+.page-container {
+  padding: $space-xl;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.page-title {
+  font-size: $text-3xl;
+  font-weight: 700;
+  margin-bottom: $space-lg;
+  color: $text-primary;
+}
+
+.page-subtitle {
+  font-size: $text-base;
+  color: $text-secondary;
+  margin-bottom: $space-xl;
+}

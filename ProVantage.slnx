@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ProVantage.API/ProVantage.API.csproj" />
+    <Project Path="src/ProVantage.Application/ProVantage.Application.csproj" />
+    <Project Path="src/ProVantage.Domain/ProVantage.Domain.csproj" />
+    <Project Path="src/ProVantage.Infrastructure/ProVantage.Infrastructure.csproj" />
+  </Folder>
+</Solution>
