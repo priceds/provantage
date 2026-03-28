@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using ProVantage.API.Middleware;
 using ProVantage.Application;
 using ProVantage.Infrastructure;
+using ProVantage.Infrastructure.Jobs;
 using ProVantage.Infrastructure.SignalR;
 using Serilog;
 
@@ -229,8 +231,26 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<DashboardHub>("/hubs/dashboard");
 
+// Hangfire dashboard (dev only — lock down in production)
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    DashboardTitle = "ProVantage Jobs",
+    Authorization = [] // Open in dev; add auth filter for production
+});
+
 // Health checks
 app.MapHealthChecks("/health");
+
+// Register recurring jobs
+RecurringJob.AddOrUpdate<ContractExpiryJob>(
+    "contract-expiry-check",
+    job => job.ExecuteAsync(),
+    "0 8 * * *"); // daily at 08:00 UTC
+
+RecurringJob.AddOrUpdate<SlaEscalationJob>(
+    "sla-escalation-check",
+    job => job.ExecuteAsync(),
+    "0 * * * *"); // every hour
 
 // Seed database in development
 if (app.Environment.IsDevelopment())

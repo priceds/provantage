@@ -48,3 +48,17 @@ public interface IPasswordHasher
     string Hash(string password);
     bool Verify(string password, string hash);
 }
+
+public interface INotificationService
+{
+    /// <summary>Persists a notification to DB and pushes it to the user via SignalR.</summary>
+    Task SendToUserAsync(Guid userId, Guid tenantId, string title, string message,
+        ProVantage.Domain.Enums.NotificationType type,
+        string? actionUrl = null, string? entityType = null, Guid? entityId = null,
+        CancellationToken ct = default);
+
+    /// <summary>Broadcasts a real-time push to all users in a tenant (no DB persistence).</summary>
+    Task SendToTenantAsync(Guid tenantId, string title, string message,
+        ProVantage.Domain.Enums.NotificationType type,
+        CancellationToken ct = default);
+}

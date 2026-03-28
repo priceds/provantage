@@ -1,7 +1,10 @@
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProVantage.Domain.Interfaces;
+using ProVantage.Infrastructure.Jobs;
 using ProVantage.Infrastructure.Persistence;
 using ProVantage.Infrastructure.Persistence.Interceptors;
 using ProVantage.Infrastructure.Services;
@@ -55,6 +58,35 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<DatabaseSeeder>();
+
+        // Notification service (SignalR + DB)
+        services.AddScoped<INotificationService, NotificationService>();
+
+        // Hangfire background jobs
+        services.AddHangfire(cfg => cfg
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(
+                configuration.GetConnectionString("DefaultConnection"),
+                new SqlServerStorageOptions
+                {
+                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                    SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                    QueuePollInterval = TimeSpan.Zero,
+                    UseRecommendedIsolationLevel = true,
+                    DisableGlobalLocks = true
+                }));
+
+        services.AddHangfireServer(opts =>
+        {
+            opts.WorkerCount = 2;
+            opts.Queues = ["default"];
+        });
+
+        // Jobs as transient so Hangfire can resolve them
+        services.AddTransient<ContractExpiryJob>();
+        services.AddTransient<SlaEscalationJob>();
 
         // SignalR
         services.AddSignalR();

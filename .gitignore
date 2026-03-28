@@ -1,6 +1,7 @@
 # ── Project-specific exclusions ──────────────────────────────────────────────
 .claude/
 ROOT_GUIDE.md
+PHASE4_PROGRESS.md
 
 # ── .NET ──────────────────────────────────────────────────────────────────────
 bin/
