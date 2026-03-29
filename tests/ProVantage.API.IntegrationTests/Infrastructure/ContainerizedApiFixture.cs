@@ -42,7 +42,8 @@ public sealed class ContainerizedApiFixture : IAsyncLifetime
             return new Phase5ApiFactory(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = builder.ConnectionString,
-                ["ConnectionStrings:Redis"] = _redisContainer.GetConnectionString()
+                ["ConnectionStrings:Redis"] = _redisContainer.GetConnectionString(),
+                ["Testing:DisableBackgroundJobs"] = "true"
             });
         }
 
