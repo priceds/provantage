@@ -431,7 +431,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
             borderColor: 'rgba(255,255,255,0.1)',
             borderWidth: 1,
             callbacks: {
-              label: ctx => ` $${ctx.parsed.y.toLocaleString()}`
+              label: (ctx: any) => ` $${Number(ctx.parsed?.y ?? 0).toLocaleString()}`
             }
           }
         },
@@ -444,7 +444,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
             grid: { color: 'rgba(255,255,255,0.04)' },
             ticks: {
               color: 'rgba(255,255,255,0.5)', font: { size: 12 },
-              callback: v => `$${Number(v).toLocaleString()}`
+              callback: (value: string | number) => `$${Number(value).toLocaleString()}`
             }
           }
         }

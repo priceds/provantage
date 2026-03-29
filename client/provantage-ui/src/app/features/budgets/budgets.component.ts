@@ -38,24 +38,24 @@ import {
       <div class="summary-card">
         <div class="card-label">Total Allocated</div>
         <div class="card-value primary">{{totalAllocated() | number:'1.0-0'}}</div>
-        <div class="card-currency">{{budgets()[0]?.currency ?? 'USD'}}</div>
+        <div class="card-currency">{{budgets()[0].currency}}</div>
       </div>
       <div class="summary-card">
         <div class="card-label">Committed (POs)</div>
         <div class="card-value warning">{{totalCommitted() | number:'1.0-0'}}</div>
-        <div class="card-currency">{{budgets()[0]?.currency ?? 'USD'}}</div>
+        <div class="card-currency">{{budgets()[0].currency}}</div>
       </div>
       <div class="summary-card">
         <div class="card-label">Spent (Invoices)</div>
         <div class="card-value accent">{{totalSpent() | number:'1.0-0'}}</div>
-        <div class="card-currency">{{budgets()[0]?.currency ?? 'USD'}}</div>
+        <div class="card-currency">{{budgets()[0].currency}}</div>
       </div>
       <div class="summary-card">
         <div class="card-label">Available</div>
         <div class="card-value" [class.danger]="totalAvailable() < 0">
           {{totalAvailable() | number:'1.0-0'}}
         </div>
-        <div class="card-currency">{{budgets()[0]?.currency ?? 'USD'}}</div>
+        <div class="card-currency">{{budgets()[0].currency}}</div>
       </div>
     </div>
   }

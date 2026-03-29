@@ -1,8 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../core/auth/auth.service';
 
 interface NavItem {
   label: string;
@@ -25,7 +26,7 @@ interface NavItem {
 
       <!-- Navigation -->
       <nav class="sidebar-nav">
-        @for (item of navItems; track item.route) {
+        @for (item of navItems(); track item.route) {
           <a
             [routerLink]="item.route"
             routerLinkActive="active"
@@ -172,21 +173,25 @@ interface NavItem {
   `]
 })
 export class SidebarComponent {
+  private authService = inject(AuthService);
   isCollapsed = signal(false);
 
-  navItems: NavItem[] = [
-    { label: 'Dashboard',     icon: 'dashboard',          route: '/dashboard' },
-    { label: 'Vendors',       icon: 'store',              route: '/vendors' },
-    { label: 'Requisitions',  icon: 'assignment',         route: '/requisitions', badge: 3 },
-    { label: 'Purchase Orders', icon: 'shopping_cart',    route: '/purchase-orders' },
-    { label: 'Invoices',      icon: 'receipt_long',       route: '/invoices' },
-    { label: 'Goods Receipts', icon: 'inventory_2',       route: '/goods-receipts' },
-    { label: 'Contracts',     icon: 'description',        route: '/contracts' },
-    { label: 'Budgets',       icon: 'account_balance',    route: '/budgets' },
-    { label: 'Analytics',     icon: 'analytics',          route: '/analytics' },
-    { label: 'Audit Logs',    icon: 'history',            route: '/audit-logs' },
-    { label: 'Settings',      icon: 'settings',           route: '/settings' },
-  ];
+  navItems = computed<NavItem[]>(() => {
+    const role = this.authService.currentUser()?.role;
+    const isAdmin = role === 'Admin' || role === 'TenantAdmin';
+
+    return [
+      { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+      { label: 'Vendors', icon: 'store', route: '/vendors' },
+      { label: 'Requisitions', icon: 'assignment', route: '/requisitions', badge: 3 },
+      { label: 'Purchase Orders', icon: 'shopping_cart', route: '/purchase-orders' },
+      { label: 'Invoices', icon: 'receipt_long', route: '/invoices' },
+      { label: 'Contracts', icon: 'description', route: '/contracts' },
+      { label: 'Budgets', icon: 'account_balance', route: '/budgets' },
+      { label: 'Reports', icon: 'bar_chart', route: '/reports' },
+      ...(isAdmin ? [{ label: 'Audit Logs', icon: 'history', route: '/audit-logs' }] : [])
+    ];
+  });
 
   toggleCollapse() {
     this.isCollapsed.update(v => !v);

@@ -1,244 +1,136 @@
 # ProVantage
 
-**Enterprise Procurement & Vendor Management Platform**
+A full-stack enterprise procurement platform. It covers the entire procurement lifecycle — from vendor onboarding through requisitions, approvals, purchase orders, goods receipts, invoice matching, contracts, and budget tracking — with real-time notifications and a full audit trail.
 
-ProVantage is a multi-tenant SaaS application that manages the full procurement lifecycle — from vendor onboarding and purchase requisitions through multi-level approvals, purchase orders, goods receipts, three-way invoice matching, and budget enforcement.
+Built as a portfolio project to demonstrate production-grade architecture patterns.
+
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet)
+![Angular 17](https://img.shields.io/badge/Angular-17-DD0031?style=for-the-badge&logo=angular)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-Azure%20Edge-CC2927?style=for-the-badge&logo=microsoftsqlserver)
+![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis)
+![SignalR](https://img.shields.io/badge/SignalR-Realtime-0C7CD5?style=for-the-badge)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)
+
+---
+
+## What it does
+
+- **Vendors** — onboard vendors, manage contacts, track approval status and ratings
+- **Requisitions** — raise purchase requests with line items, route through approval workflows
+- **Purchase Orders** — generate POs from approved requisitions, track delivery status
+- **Goods Receipts** — record what was actually received against a PO
+- **Invoice Matching** — three-way match invoices against POs and goods receipts, flag variances
+- **Budgets** — allocate budgets by department and category, track committed vs spent
+- **Contracts** — manage vendor contracts, get notified before expiry
+- **Dashboard** — live KPI tiles, spend trend chart, pending approvals, recent activity
+- **Notifications** — real-time alerts via SignalR when anything in the workflow changes
+- **Audit Logs** — every create/update/delete is recorded with user, timestamp, and before/after values
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Angular 17 (standalone components, signals, Chart.js) |
+| Backend | .NET 10 Web API (Clean Architecture, CQRS via MediatR) |
+| Database | Azure SQL Edge (Docker) — EF Core 10 |
+| Cache | Redis (Docker) — output cache + distributed cache |
+| Real-time | SignalR WebSockets |
+| Background jobs | Hangfire (contract expiry alerts, SLA escalation) |
+| Logging | Seq structured logs (Docker) |
+| Auth | JWT + refresh tokens, role-based access (Admin / Manager / Buyer) |
+| Multi-tenancy | Every record is scoped to a tenant via EF Core global query filters |
 
 ---
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph Client["🖥️ Angular 17 SPA"]
-        UI_Auth["Login / Auth"]
-        UI_Vendors["Vendor Management"]
-        UI_Req["Requisitions"]
-        UI_PO["Purchase Orders"]
-        UI_INV["Invoices & 3-Way Match"]
-        UI_BUD["Budgets"]
-    end
+```
+ProVantage.Domain          — Entities, value objects, enums, domain events
+ProVantage.Application     — CQRS handlers, validators, pipeline behaviors, DTOs
+ProVantage.Infrastructure  — EF Core, Redis, SignalR hubs, Hangfire jobs, seed data
+ProVantage.API             — Controllers, middleware, DI wiring, startup
 
-    subgraph API["⚙️ .NET 10 Web API"]
-        MW["Middleware<br/>(Tenant Resolution · CORS · Exception Handler)"]
-        RL["Rate Limiting<br/>(Fixed / Sliding / Token Bucket)"]
-        OC["Output Cache<br/>(Vendors 30s · Dashboard 1min)"]
-
-        subgraph CQRS["MediatR Pipeline"]
-            LOG["Logging Behavior"]
-            VAL["Validation Behavior<br/>(FluentValidation)"]
-            CACHE["Caching Behavior<br/>(Redis)"]
-            CMD["Commands"]
-            QRY["Queries"]
-        end
-    end
-
-    subgraph Domain["📦 Domain Layer"]
-        ENT["Entities<br/>(Vendor · PurchaseOrder · Invoice · GoodsReceipt · Budget…)"]
-        VO["Value Objects<br/>(Money · Address · DateRange)"]
-        EVT["Domain Events<br/>(RequisitionSubmitted · InvoiceMatched · BudgetThresholdExceeded)"]
-    end
-
-    subgraph Infra["🔧 Infrastructure"]
-        EF["EF Core 10<br/>+ Global Filters<br/>(TenantId · SoftDelete)"]
-        REDIS["Redis<br/>(Distributed Cache)"]
-        TOKEN["Token Service<br/>(JWT + Refresh)"]
-        SEED["Database Seeder"]
-    end
-
-    subgraph Storage["🗄️ Data Stores"]
-        SQL[("SQL Server")]
-        RDB[("Redis")]
-    end
-
-    Client -->|HTTPS · JWT| API
-    API --> MW --> RL --> CQRS
-    CQRS --> Domain
-    Domain --> Infra
-    EF --> SQL
-    REDIS --> RDB
+client/provantage-ui/
+  src/app/core/            — Auth service, guards, HTTP interceptor, shared services
+  src/app/features/        — One folder per page (dashboard, vendors, requisitions, …)
+  src/app/layout/          — Shell, sidebar, header
 ```
 
----
-
-## How It Works — Core Flows
-
-```mermaid
-sequenceDiagram
-    participant Buyer
-    participant API
-    participant ApprovalEngine
-    participant Manager
-    participant Vendor
-
-    Buyer->>API: Create Requisition (draft)
-    Buyer->>API: Submit Requisition
-    API->>ApprovalEngine: Evaluate thresholds
-    alt Amount ≤ $5K
-        ApprovalEngine-->>API: Auto-approve
-    else Amount ≤ $50K
-        ApprovalEngine->>Manager: Single approval step
-        Manager-->>API: Approve
-    else Amount > $50K
-        ApprovalEngine->>Manager: Step 1
-        Manager-->>API: Approve
-        ApprovalEngine->>Manager: Step 2 (Director/Admin)
-        Manager-->>API: Approve
-    end
-    API->>API: Generate Purchase Order
-    API->>Vendor: PO sent (status = Sent)
-    Vendor-->>API: Goods Receipt recorded
-    Vendor-->>API: Invoice submitted
-    API->>API: Run Three-Way Match
-    note over API: Invoice vs PO vs Goods Receipt<br/>Price variance % · Qty tolerance
-    alt All lines within tolerance
-        API-->>Buyer: Invoice MATCHED ✓
-    else Discrepancy found
-        API-->>Buyer: Invoice DISPUTED ⚠
-    end
-```
+Requests flow: Angular → HTTP proxy → .NET API Controller → MediatR handler → EF Core → SQL Server.
+Real-time updates flow back via SignalR WebSocket connections.
 
 ---
 
-## Three-Way Match Engine
+## Quick start
 
-```mermaid
-flowchart LR
-    INV["Invoice\nLines"]
-    PO["Purchase Order\nLines"]
-    GR["Goods Receipts\n(per item)"]
+**Prerequisites:** Docker Desktop, .NET 10 SDK, Node 20+
 
-    INV --> MATCH
-    PO --> MATCH
-    GR --> MATCH
-
-    subgraph MATCH["Match Engine"]
-        direction TB
-        P["Price check\n|inv_price - po_price| / po_price ≤ tolerance%"]
-        Q["Qty check\ninvoice_qty ≤ received_qty × (1 + tolerance%)"]
-    end
-
-    MATCH --> R{All lines\npass?}
-    R -->|Yes| MATCHED["✅ Matched\nUpdate budget spend"]
-    R -->|No| DISPUTED["⚠️ Disputed\nStore discrepancy notes\nper line"]
-```
-
-Tolerance percentages (`PriceVarianceTolerancePercent`, `QuantityVarianceTolerancePercent`) are configured per tenant.
-
----
-
-## Solution Structure
-
-```
-ProVantage/
-├── src/
-│   ├── ProVantage.Domain/           # Entities, Value Objects, Enums, Domain Events
-│   ├── ProVantage.Application/      # CQRS handlers, validators, pipeline behaviors, DTOs
-│   ├── ProVantage.Infrastructure/   # EF Core, Redis, JWT, seeder, interceptors
-│   └── ProVantage.API/              # Controllers, middleware, Program.cs
-├── client/
-│   └── provantage-ui/               # Angular 17 standalone SPA
-│       └── src/app/
-│           ├── core/                # Auth service, guards, interceptors
-│           ├── features/            # One folder per page (login, vendors, requisitions…)
-│           └── layout/              # Shell, sidebar, header
-└── docker-compose.yml               # SQL Server + Redis + Seq
-```
-
----
-
-## Domain Model (key relationships)
-
-```mermaid
-erDiagram
-    Tenant ||--o{ User : has
-    Tenant ||--o{ Vendor : has
-    Tenant ||--o{ BudgetAllocation : has
-
-    Vendor ||--o{ VendorContact : has
-    Vendor ||--o{ PurchaseOrder : receives
-    Vendor ||--o{ Invoice : sends
-
-    PurchaseRequisition ||--o{ RequisitionLineItem : contains
-    PurchaseRequisition ||--o{ ApprovalWorkflow : triggers
-    ApprovalWorkflow ||--o{ ApprovalStep : has
-
-    PurchaseRequisition ||--o| PurchaseOrder : "converts to"
-    PurchaseOrder ||--o{ OrderLineItem : contains
-    PurchaseOrder ||--o{ GoodsReceipt : "received via"
-    PurchaseOrder ||--o{ Invoice : "invoiced by"
-
-    Invoice ||--o{ InvoiceLineItem : contains
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **API Framework** | .NET 10 Web API |
-| **Architecture** | Clean Architecture — Domain / Application / Infrastructure / Presentation |
-| **CQRS** | MediatR with pipeline behaviors (logging, validation, Redis caching) |
-| **ORM** | Entity Framework Core 10 — SQL Server, Fluent API, global query filters |
-| **Validation** | FluentValidation (auto-registered, runs in MediatR pipeline) |
-| **Caching** | StackExchange.Redis + ASP.NET Output Cache |
-| **Rate Limiting** | ASP.NET built-in (fixed window, sliding window, token bucket) |
-| **Auth** | JWT Bearer + refresh tokens, RBAC (Admin / Manager / Buyer / Viewer) |
-| **Logging** | Serilog → Seq |
-| **Frontend** | Angular 17 Standalone — signals, reactive forms, lazy routes |
-| **Styling** | Custom SCSS design system, glassmorphism dark mode |
-| **Infrastructure** | Docker Compose — SQL Server (ARM64), Redis, Seq |
-
----
-
-## Key Design Decisions
-
-**Multi-tenancy** — every entity carries `TenantId`; EF Core global query filters enforce isolation at the ORM level so no query can accidentally cross tenant boundaries.
-
-**Result\<T\> pattern** — handlers never throw for expected failures. Every command and query returns `Result` or `Result<T>` with an `IsSuccess` flag, error message, and HTTP status code, keeping controller code uniform.
-
-**Money value object** — monetary amounts are always paired with a currency string (`Money(amount, currency)`). Arithmetic operations (`Add`, `Subtract`, `Multiply`) enforce same-currency checks at compile time.
-
-**Pipeline behaviors** — cross-cutting concerns (logging, validation, caching) are wired as MediatR pipeline behaviors so individual handlers stay focused on business logic only.
-
-**Soft delete + audit** — `IsDeleted` / `DeletedAt` handled by `SoftDeleteInterceptor`; `CreatedBy` / `ModifiedBy` / timestamps by `AuditableEntityInterceptor`. Neither requires any handler code.
-
----
-
-## Running Locally
-
-**Prerequisites:** .NET 10 SDK · Node.js 20+ · Docker Desktop
+### 1. Start infrastructure
 
 ```bash
-# 1 — Start infrastructure
 docker compose up -d
-
-# 2 — API  (http://localhost:5000 · Swagger at /swagger)
-cd src/ProVantage.API
-dotnet run
-
-# 3 — Angular SPA  (http://localhost:4200)
-cd client/provantage-ui
-npm install && npm start
 ```
 
+This starts SQL Server (port 1433), Redis (port 6379), and Seq (port 5341).
+
+### 2. Run the API
+
+```bash
+cd src/ProVantage.API
+dotnet run
+```
+
+On first run in Development mode, the database is created and seeded automatically.
+
+API is available at `http://localhost:5091`
+Swagger UI: `http://localhost:5091/swagger`
+Hangfire dashboard: `http://localhost:5091/hangfire`
+
+### 3. Run the Angular app
+
+```bash
+cd client/provantage-ui
+npm install
+ng serve
+```
+
+App is available at `http://localhost:4200`
+
 ---
 
-## API Overview
+## Seed accounts
 
-| Area | Endpoints |
-|------|-----------|
-| Auth | `POST` login · register · refresh-token · revoke-token |
-| Vendors | `GET/POST` list+create · `GET/PUT` detail+update · `PATCH` status |
-| Requisitions | `GET/POST` list+create · `GET` detail · `POST` submit / approve / reject |
-| Purchase Orders | `GET/POST` list+create · `GET` detail · `PATCH` status |
-| Goods Receipts | `POST` record · `GET` list by PO |
-| Invoices | `GET/POST` list+create · `GET` detail · `POST /{id}/match` |
-| Budgets | `GET` utilization · `POST` allocate |
+| Email | Password | Role |
+|---|---|---|
+| admin@acme.com | Admin123! | Admin |
+| manager@acme.com | Admin123! | Manager |
+| buyer@acme.com | Admin123! | Buyer |
+
+The seed also creates sample vendors, contracts, requisitions, purchase orders, invoices, budgets, notifications, and audit log entries so every page has data to browse immediately.
 
 ---
 
-## License
+## Key patterns
 
-MIT
+- **Clean Architecture** — strict dependency direction: Domain ← Application ← Infrastructure ← API
+- **CQRS** — commands and queries are separate MediatR requests, handlers co-located with their request
+- **Result pattern** — handlers return `Result<T>`, the base controller unwraps it to the right HTTP response
+- **Multi-tenancy** — `TenantId` on every entity, resolved from the JWT claim, enforced by EF Core global filters
+- **Pipeline behaviors** — validation (FluentValidation) and caching (`ICacheable`) wired as MediatR pipeline steps
+- **Output caching** — read-heavy endpoints cached at the API layer, invalidated on write
+- **Signals** — Angular state managed with Angular 17 signals instead of RxJS BehaviorSubjects
+
+---
+
+## Running in production mode
+
+The Angular build is output-hashed and minified by default:
+
+```bash
+cd client/provantage-ui
+ng build
+```
+
+Serve the `dist/provantage-ui/browser` folder from any static host or the .NET API's `wwwroot`.

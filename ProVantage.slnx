@@ -5,4 +5,9 @@
     <Project Path="src/ProVantage.Domain/ProVantage.Domain.csproj" />
     <Project Path="src/ProVantage.Infrastructure/ProVantage.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ProVantage.API.IntegrationTests/ProVantage.API.IntegrationTests.csproj" />
+    <Project Path="tests/ProVantage.Application.Tests/ProVantage.Application.Tests.csproj" />
+    <Project Path="tests/ProVantage.Domain.Tests/ProVantage.Domain.Tests.csproj" />
+  </Folder>
 </Solution>

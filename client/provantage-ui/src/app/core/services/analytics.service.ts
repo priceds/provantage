@@ -25,13 +25,15 @@ export interface VendorPerformanceDto {
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
+  private readonly apiUrl = '/api/analytics';
+
   constructor(private http: HttpClient) {}
 
   getSpendByCategory(year: number): Observable<SpendByCategoryDto[]> {
-    return this.http.get<SpendByCategoryDto[]>(`/api/analytics/spend-by-category?year=${year}`);
+    return this.http.get<SpendByCategoryDto[]>(`${this.apiUrl}/spend-by-category?year=${year}`);
   }
 
   getVendorPerformance(year: number): Observable<VendorPerformanceDto[]> {
-    return this.http.get<VendorPerformanceDto[]>(`/api/analytics/vendor-performance?year=${year}`);
+    return this.http.get<VendorPerformanceDto[]>(`${this.apiUrl}/vendor-performance?year=${year}`);
   }
 }

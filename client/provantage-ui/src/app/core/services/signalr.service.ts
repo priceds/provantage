@@ -12,6 +12,7 @@ export interface SignalRNotification {
 
 @Injectable({ providedIn: 'root' })
 export class SignalRService {
+  private readonly hubBaseUrl = '/hubs';
   private notificationConn: signalR.HubConnection | null = null;
   private dashboardConn: signalR.HubConnection | null = null;
 
@@ -30,13 +31,13 @@ export class SignalRService {
     const tokenFactory = () => token;
 
     this.notificationConn = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/notifications', { accessTokenFactory: tokenFactory })
+      .withUrl(`${this.hubBaseUrl}/notifications`, { accessTokenFactory: tokenFactory })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     this.dashboardConn = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/dashboard', { accessTokenFactory: tokenFactory })
+      .withUrl(`${this.hubBaseUrl}/dashboard`, { accessTokenFactory: tokenFactory })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
       .build();

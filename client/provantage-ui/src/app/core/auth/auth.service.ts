@@ -74,6 +74,15 @@ export class AuthService {
     }
   }
 
+  /** Stores tokens + user and updates signals. Used by both login and register. */
+  handleAuthResponse(response: AuthResponse): void {
+    this.storeTokens(response.accessToken, response.refreshToken);
+    localStorage.setItem(this.userKey, JSON.stringify(response.user));
+    this.currentUser.set(response.user);
+    this.isAuthenticated.set(true);
+    this.signalR.connect(response.accessToken).catch(console.warn);
+  }
+
   private hasToken(): boolean {
     return !!localStorage.getItem(this.tokenKey);
   }

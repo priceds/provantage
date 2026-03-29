@@ -17,6 +17,10 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services, IConfiguration configuration)
     {
+        var useSqlite = configuration.GetValue<bool>("Testing:UseSqlite");
+        var useInMemoryCache = configuration.GetValue<bool>("Testing:UseInMemoryCache");
+        var disableBackgroundJobs = configuration.GetValue<bool>("Testing:DisableBackgroundJobs");
+
         // EF Core + SQL Server
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<SoftDeleteInterceptor>();
@@ -26,33 +30,50 @@ public static class DependencyInjection
             var auditInterceptor = sp.GetRequiredService<AuditableEntityInterceptor>();
             var softDeleteInterceptor = sp.GetRequiredService<SoftDeleteInterceptor>();
 
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                sqlOptions =>
-                {
-                    sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-                    sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
-                })
-                .AddInterceptors(auditInterceptor, softDeleteInterceptor);
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+            if (useSqlite)
+            {
+                options.UseSqlite(connectionString)
+                    .AddInterceptors(auditInterceptor, softDeleteInterceptor);
+            }
+            else
+            {
+                options.UseSqlServer(
+                    connectionString,
+                    sqlOptions =>
+                    {
+                        sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+                        sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
+                    })
+                    .AddInterceptors(auditInterceptor, softDeleteInterceptor);
+            }
         });
 
         services.AddScoped<IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>());
 
-        // Redis
-        var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
-        services.AddSingleton<IConnectionMultiplexer>(
-            ConnectionMultiplexer.Connect(redisConnection));
-        services.AddStackExchangeRedisCache(options =>
+        if (useInMemoryCache)
         {
-            options.Configuration = redisConnection;
-            options.InstanceName = "ProVantage:";
-        });
+            services.AddSingleton<ICacheService, InMemoryCacheService>();
+        }
+        else
+        {
+            // Redis
+            var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+            services.AddSingleton<IConnectionMultiplexer>(
+                ConnectionMultiplexer.Connect(redisConnection));
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnection;
+                options.InstanceName = "ProVantage:";
+            });
+            services.AddScoped<ICacheService, RedisCacheService>();
+        }
 
         // Services
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ICurrentTenantService, CurrentTenantService>();
-        services.AddScoped<ICacheService, RedisCacheService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<ITokenService, TokenService>();
@@ -62,31 +83,34 @@ public static class DependencyInjection
         // Notification service (SignalR + DB)
         services.AddScoped<INotificationService, NotificationService>();
 
-        // Hangfire background jobs
-        services.AddHangfire(cfg => cfg
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(
-                configuration.GetConnectionString("DefaultConnection"),
-                new SqlServerStorageOptions
-                {
-                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                    SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                    QueuePollInterval = TimeSpan.Zero,
-                    UseRecommendedIsolationLevel = true,
-                    DisableGlobalLocks = true
-                }));
-
-        services.AddHangfireServer(opts =>
+        if (!disableBackgroundJobs)
         {
-            opts.WorkerCount = 2;
-            opts.Queues = ["default"];
-        });
+            // Hangfire background jobs
+            services.AddHangfire(cfg => cfg
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSqlServerStorage(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    new SqlServerStorageOptions
+                    {
+                        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                        QueuePollInterval = TimeSpan.Zero,
+                        UseRecommendedIsolationLevel = true,
+                        DisableGlobalLocks = true
+                    }));
 
-        // Jobs as transient so Hangfire can resolve them
-        services.AddTransient<ContractExpiryJob>();
-        services.AddTransient<SlaEscalationJob>();
+            services.AddHangfireServer(opts =>
+            {
+                opts.WorkerCount = 2;
+                opts.Queues = ["default"];
+            });
+
+            // Jobs as transient so Hangfire can resolve them
+            services.AddTransient<ContractExpiryJob>();
+            services.AddTransient<SlaEscalationJob>();
+        }
 
         // SignalR
         services.AddSignalR();

@@ -6,18 +6,12 @@ services:
     container_name: provantage-sql
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "ProVantage@2026!"
+      MSSQL_SA_PASSWORD: "Root@123"
     ports:
       - "1433:1433"
     volumes:
       - sqldata:/var/opt/mssql
     restart: unless-stopped
-    healthcheck:
-      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "ProVantage@2026!" -Q "SELECT 1" || exit 1
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 30s
 
   redis:
     image: redis:7-alpine
@@ -32,7 +26,8 @@ services:
       retries: 5
 
   seq:
-    image: datalust/seq:latest
+    image: datalust/seq:2024.3
+    platform: linux/amd64
     container_name: provantage-seq
     environment:
       ACCEPT_EULA: "Y"

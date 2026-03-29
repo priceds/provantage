@@ -67,7 +67,7 @@ import { AuthService } from '../../core/auth/auth.service';
               <button
                 type="button"
                 class="toggle-password"
-                (click)="showPassword.update(v => !v)">
+                (click)="togglePassword()">
                 <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
             </div>
@@ -382,5 +382,9 @@ export class LoginComponent {
         this.isLoading.set(false);
       }
     });
+  }
+
+  togglePassword(): void {
+    this.showPassword.update(value => !value);
   }
 }

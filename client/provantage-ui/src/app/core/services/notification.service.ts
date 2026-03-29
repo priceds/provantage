@@ -25,6 +25,7 @@ export interface PaginatedNotifications {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
+  private readonly apiUrl = '/api/notifications';
   private http = inject(HttpClient);
   private signalR = inject(SignalRService);
 
@@ -54,12 +55,12 @@ export class NotificationService {
 
   loadNotifications(unreadOnly = false): void {
     this.http
-      .get<PaginatedNotifications>(`/api/notifications?pageSize=20&unreadOnly=${unreadOnly}`)
+      .get<PaginatedNotifications>(`${this.apiUrl}?pageSize=20&unreadOnly=${unreadOnly}`)
       .subscribe(data => this.notifications.set(data.items));
   }
 
   markRead(id: string): void {
-    this.http.post(`/api/notifications/${id}/read`, {}).subscribe(() => {
+    this.http.post(`${this.apiUrl}/${id}/read`, {}).subscribe(() => {
       this.notifications.update(list =>
         list.map(n => n.id === id ? { ...n, isRead: true } : n)
       );
@@ -67,7 +68,7 @@ export class NotificationService {
   }
 
   markAllRead(): void {
-    this.http.post('/api/notifications/read-all', {}).subscribe(() => {
+    this.http.post(`${this.apiUrl}/read-all`, {}).subscribe(() => {
       this.notifications.update(list => list.map(n => ({ ...n, isRead: true })));
     });
   }

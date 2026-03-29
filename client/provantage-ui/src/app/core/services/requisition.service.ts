@@ -78,7 +78,7 @@ export const REQUISITION_STATUS_CLASSES: Record<number, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class RequisitionService {
-  private readonly apiUrl = 'http://localhost:5000/api/requisitions';
+  private readonly apiUrl = '/api/requisitions';
 
   constructor(private http: HttpClient) {}
 

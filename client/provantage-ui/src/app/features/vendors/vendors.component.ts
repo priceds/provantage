@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
@@ -483,7 +483,10 @@ export class VendorsComponent implements OnInit {
 
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private vendorService: VendorService) {}
+  constructor(
+    private vendorService: VendorService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.loadVendors();
@@ -530,7 +533,7 @@ export class VendorsComponent implements OnInit {
   }
 
   viewVendor(id: string): void {
-    // Navigation to detail page — will be expanded in Phase 3+
+    this.router.navigate(['/vendors', id]);
   }
 
   changeStatus(id: string, status: number): void {

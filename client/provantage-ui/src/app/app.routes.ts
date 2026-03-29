@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { ShellComponent } from './layout/shell/shell.component';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { adminGuard, authGuard, guestGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // Public routes
@@ -9,6 +9,12 @@ export const routes: Routes = [
     canActivate: [guestGuard],
     loadComponent: () =>
       import('./features/login/login.component').then(m => m.LoginComponent)
+  },
+  {
+    path: 'register',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/register/register.component').then(m => m.RegisterComponent)
   },
 
   // Protected routes inside shell
@@ -29,6 +35,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/vendors/vendors.component')
             .then(m => m.VendorsComponent)
+      },
+      {
+        path: 'vendors/:id',
+        loadComponent: () =>
+          import('./features/vendors/vendor-detail.component')
+            .then(m => m.VendorDetailComponent)
       },
       {
         path: 'requisitions',
@@ -54,6 +66,25 @@ export const routes: Routes = [
           import('./features/budgets/budgets.component')
             .then(m => m.BudgetsComponent)
       },
+      {
+        path: 'contracts',
+        loadComponent: () =>
+          import('./features/contracts/contracts.component')
+            .then(m => m.ContractsComponent)
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./features/reports/reports.component')
+            .then(m => m.ReportsComponent)
+      },
+      {
+        path: 'audit-logs',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/audit-logs/audit-logs.component')
+            .then(m => m.AuditLogsComponent)
+      }
     ]
   },
 

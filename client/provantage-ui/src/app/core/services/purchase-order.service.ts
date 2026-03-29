@@ -79,7 +79,7 @@ export const PO_STATUS_CLASSES: Record<number, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class PurchaseOrderService {
-  private readonly apiUrl = 'http://localhost:5000/api/purchase-orders';
+  private readonly apiUrl = '/api/purchase-orders';
 
   constructor(private http: HttpClient) {}
 

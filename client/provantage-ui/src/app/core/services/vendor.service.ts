@@ -88,7 +88,7 @@ export const VENDOR_STATUS_CLASSES: Record<number, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class VendorService {
-  private readonly apiUrl = 'http://localhost:5000/api/vendors';
+  private readonly apiUrl = '/api/vendors';
 
   constructor(private http: HttpClient) {}
 

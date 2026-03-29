@@ -38,7 +38,7 @@ export const BUDGET_PERIOD_LABELS: Record<number, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class BudgetService {
-  private readonly apiUrl = 'http://localhost:5000/api/budgets';
+  private readonly apiUrl = '/api/budgets';
 
   constructor(private http: HttpClient) {}
 

@@ -21,9 +21,11 @@ export interface DashboardKpis {
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
+  private readonly apiUrl = '/api/dashboard';
+
   constructor(private http: HttpClient) {}
 
   getKpis(): Observable<DashboardKpis> {
-    return this.http.get<DashboardKpis>('/api/dashboard/kpis');
+    return this.http.get<DashboardKpis>(`${this.apiUrl}/kpis`);
   }
 }

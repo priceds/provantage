@@ -98,7 +98,7 @@ export const INVOICE_STATUS_CLASSES: Record<number, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class InvoiceService {
-  private readonly apiUrl = 'http://localhost:5000/api/invoices';
+  private readonly apiUrl = '/api/invoices';
 
   constructor(private http: HttpClient) {}
 

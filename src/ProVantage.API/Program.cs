@@ -3,16 +3,21 @@ using System.Threading.RateLimiting;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProVantage.API.Middleware;
 using ProVantage.Application;
 using ProVantage.Infrastructure;
 using ProVantage.Infrastructure.Jobs;
+using ProVantage.Infrastructure.Persistence;
 using ProVantage.Infrastructure.SignalR;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+var useSqlite = builder.Configuration.GetValue<bool>("Testing:UseSqlite");
+var useInMemoryCache = builder.Configuration.GetValue<bool>("Testing:UseInMemoryCache");
+var disableBackgroundJobs = builder.Configuration.GetValue<bool>("Testing:DisableBackgroundJobs");
 
 // ──────────────────────────────────────────────
 // SERILOG
@@ -178,15 +183,30 @@ builder.Services.AddSwaggerGen(options =>
 // ──────────────────────────────────────────────
 // HEALTH CHECKS
 // ──────────────────────────────────────────────
-builder.Services.AddHealthChecks()
-    .AddSqlServer(
+var healthChecks = builder.Services.AddHealthChecks();
+
+if (useSqlite)
+{
+    healthChecks.AddCheck(
+        "sqlite",
+        () => HealthCheckResult.Healthy("SQLite testing mode"),
+        tags: ["db", "ready"]);
+}
+else
+{
+    healthChecks.AddSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")!,
         name: "sqlserver",
-        tags: ["db", "ready"])
-    .AddRedis(
+        tags: ["db", "ready"]);
+}
+
+if (!useInMemoryCache)
+{
+    healthChecks.AddRedis(
         builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379",
         name: "redis",
         tags: ["cache", "ready"]);
+}
 
 // ══════════════════════════════════════════════
 // MIDDLEWARE PIPELINE
@@ -231,33 +251,41 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<DashboardHub>("/hubs/dashboard");
 
-// Hangfire dashboard (dev only — lock down in production)
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
+if (!disableBackgroundJobs)
 {
-    DashboardTitle = "ProVantage Jobs",
-    Authorization = [] // Open in dev; add auth filter for production
-});
+    // Hangfire dashboard (dev only — lock down in production)
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        DashboardTitle = "ProVantage Jobs",
+        Authorization = [] // Open in dev; add auth filter for production
+    });
+}
 
 // Health checks
 app.MapHealthChecks("/health");
 
-// Register recurring jobs
-RecurringJob.AddOrUpdate<ContractExpiryJob>(
-    "contract-expiry-check",
-    job => job.ExecuteAsync(),
-    "0 8 * * *"); // daily at 08:00 UTC
+if (!disableBackgroundJobs)
+{
+    // Register recurring jobs
+    RecurringJob.AddOrUpdate<ContractExpiryJob>(
+        "contract-expiry-check",
+        job => job.ExecuteAsync(),
+        "0 8 * * *"); // daily at 08:00 UTC
 
-RecurringJob.AddOrUpdate<SlaEscalationJob>(
-    "sla-escalation-check",
-    job => job.ExecuteAsync(),
-    "0 * * * *"); // every hour
+    RecurringJob.AddOrUpdate<SlaEscalationJob>(
+        "sla-escalation-check",
+        job => job.ExecuteAsync(),
+        "0 * * * *"); // every hour
+}
 
 // Seed database in development
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    var seeder = scope.ServiceProvider.GetRequiredService<ProVantage.Infrastructure.Services.DatabaseSeeder>();
-    await seeder.SeedAsync();
+    await SeedData.SeedAsync(app.Services);
 }
 
 await app.RunAsync();
+
+public partial class Program
+{
+}

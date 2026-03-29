@@ -219,7 +219,7 @@ import { PaginatedList } from '../../core/services/vendor.service';
             </div>
 
             <div formArrayName="lineItems" class="line-items-list">
-              @for (item of lineItemsArray.controls; track $index; let i = $index) {
+              @for (item of lineItemsArray.controls; track item; let i = $index) {
                 <div [formGroupName]="i" class="line-item-row glass-card">
                   <div class="line-item-header">
                     <span class="line-item-num">#{{ i + 1 }}</span>
